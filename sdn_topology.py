@@ -50,6 +50,12 @@ class SDNTopo(Topo):
       for j in irange(i+1,len(core_switch_list)-1):
         self.addLink(core_switch_list[i],core_switch_list[j])
 
+    # DEBUG: Add one host to each core switch
+    h3 = self.addHost("h3", ip="10.100.112.83/24")
+    h4 = self.addHost("h4", ip="10.100.112.84/24")
+    self.addLink(h3, core_switch_list[0])
+    self.addLink(h4, core_switch_list[1])
+
 # Start network functions
 def startNetwork():
   "Creates and starts the network"
