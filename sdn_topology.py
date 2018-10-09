@@ -11,7 +11,7 @@ from mininet.node import RemoteController
 
 # Define global vars
 net = None
-switch_list = []
+core_switch_list = []
 
 # Define the topology class
 class SDNTopo(Topo):
@@ -29,14 +29,56 @@ class SDNTopo(Topo):
   # Create the k switches of the mesh topology
   for i in irange(3,k+3):
     switch_name = self.addSwitch('s%s' % i)
-    switch_list.append(switch_name)
+    core_switch_list.append(switch_name)
 
   # Create the edge switches
   s1 = self.addSwitch('s1')
   s2 = self.addSwitch('s2')
 
   # Connect the edge switches with 2 switches
-  self.addLink(s1, switch_list[0])
-  self.addLink(s1, switch_list[1])
-  self.addLink(s2, switch_list[-1])
-  self.addLink(s2, switch_list[-2])
+  self.addLink(s1, core_switch_list[0])
+  self.addLink(s1, core_switch_list[1])
+  self.addLink(s2, core_switch_list[-1])
+  self.addLink(s2, core_switch_list[-2])
+
+  # Connect the core switches in a mesh topology
+  for i in irange(0,len(core_switch_list)-2):
+    for j in irange(i+1,len(core_switch_list)-1):
+      self.addLink(core_switch_list[i],core_switch_list[j])
+
+# Start network functions
+def startNetwork():
+  "Creates and starts the network"
+
+  global net, k
+  info(' *** Creating Overlay Network Topology ***\n')
+  # Create the topology object
+  topo = SDNTopo(k)
+  # Create and start the network
+  C1= RemoteController("c1", ip="10.30.0.90")
+  net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
+  net.start
+  info('*** Running CLI ***\n')
+  CLI(net)
+
+
+# Stop network functions
+def stopNetwork():
+  "Stops the network"
+
+  global net
+  if net is not None:
+    info("*** Tearing down overlay network ***\n")
+    net.stop()
+
+# If run as a script
+if __name__ == '__main__':
+  # Force cleanup on exit by registering a cleanup function
+  atexit.register(stopNetwork)
+
+  # Print useful informations
+  setLogLevel('info')
+
+  # Start network
+  startNetwork()
+
