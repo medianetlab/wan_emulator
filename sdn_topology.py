@@ -39,6 +39,11 @@ class SDNTopo(Topo):
     s1 = self.addSwitch('s1')
     s2 = self.addSwitch('s2')
 
+    # Create the bridge switches and Links
+    s10 = self.addSwitch('s10')
+    #s20 = self.addSwitch('s20')
+    self.addLink(s1, s10)
+
     # Connect the edge switches with 2 switches
     self.addLink(s1, core_switch_list[0])
     self.addLink(s1, core_switch_list[1])
@@ -46,13 +51,16 @@ class SDNTopo(Topo):
     self.addLink(s2, core_switch_list[-2])
 
     # Connect the core switches in a mesh topology
-    for i in irange(0,len(core_switch_list)-2):
-      for j in irange(i+1,len(core_switch_list)-1):
-        self.addLink(core_switch_list[i],core_switch_list[j])
+    #for i in irange(0,len(core_switch_list)-2):
+    #  for j in irange(i+1,len(core_switch_list)-1):
+    #    self.addLink(core_switch_list[i],core_switch_list[j])
+
+    # Make STP links
+    self.addLink(core_switch_list[1],core_switch_list[3])
 
     # DEBUG: Add one host to each core switch
-    h3 = self.addHost("h3", ip="10.100.112.83/24")
-    h4 = self.addHost("h4", ip="10.100.112.84/24")
+    h3 = self.addHost("h3", ip="10.30.1.210/16")
+    h4 = self.addHost("h4", ip="10.30.1.211/16")
     self.addLink(h3, core_switch_list[0])
     self.addLink(h4, core_switch_list[1])
 
@@ -67,7 +75,7 @@ def startNetwork():
   # Create and start the network
   c1= RemoteController("c1", ip="10.30.0.90")
   net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
-  net.start
+  net.start()
   info('*** Running CLI ***\n')
   CLI(net)
 
