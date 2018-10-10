@@ -41,8 +41,9 @@ class SDNTopo(Topo):
 
     # Create the bridge switches and Links
     s10 = self.addSwitch('s10')
-    #s20 = self.addSwitch('s20')
+    s20 = self.addSwitch('s20')
     self.addLink(s1, s10)
+    self.addLink(s2, s20)
 
     # Connect the edge switches with 2 switches
     self.addLink(s1, core_switch_list[0])
@@ -50,6 +51,7 @@ class SDNTopo(Topo):
     self.addLink(s2, core_switch_list[-1])
     self.addLink(s2, core_switch_list[-2])
 
+    # **** Uncomment for WAN mesh topology ****
     # Connect the core switches in a mesh topology
     #for i in irange(0,len(core_switch_list)-2):
     #  for j in irange(i+1,len(core_switch_list)-1):
@@ -59,8 +61,8 @@ class SDNTopo(Topo):
     self.addLink(core_switch_list[1],core_switch_list[3])
 
     # DEBUG: Add one host to each core switch
-    h3 = self.addHost("h3", ip="10.30.1.210/16")
-    h4 = self.addHost("h4", ip="10.30.1.211/16")
+    h3 = self.addHost("h3", ip="10.100.112.101/20")
+    h4 = self.addHost("h4", ip="10.100.112.102/20")
     self.addLink(h3, core_switch_list[0])
     self.addLink(h4, core_switch_list[1])
 
@@ -99,4 +101,3 @@ if __name__ == '__main__':
 
   # Start network
   startNetwork()
-
