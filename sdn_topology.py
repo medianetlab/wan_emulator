@@ -52,7 +52,7 @@ class SDNTopo(Topo):
     self.addLink(s2, core_switch_list[-2])
 
     # **** Uncomment for WAN mesh topology ****
-    # Connect the core switches in a mesh topology
+    #  Connect the core switches in a mesh topology
     #for i in irange(0,len(core_switch_list)-2):
     #  for j in irange(i+1,len(core_switch_list)-1):
     #    self.addLink(core_switch_list[i],core_switch_list[j])
