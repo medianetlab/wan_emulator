@@ -3,12 +3,14 @@
 import atexit
 import argparse
 import logging
+import subprocess
+import os
 
 # Import Mininet classes
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.link import TCLink
-from mininet.log import setLogLevel, info
+from mininet.log import setLogLevel, info, debug
 from mininet.cli import CLI
 from mininet.node import RemoteController
 from mininet.util import irange
@@ -50,6 +52,19 @@ parser.add_argument(
     help="Define the Loss on the links in percentage (Example 1)",
     type=int,
 )
+parser.add_argument(
+    "--ryu", action="store_true", help="Start RYU Controller with Simple Switch module on localhost"
+)
+parser.add_argument(
+    "--controller",
+    "-c",
+    dest="ctl",
+    required=False,
+    default=None,
+    help="Define a custom SDN Controller for switches in the form controller_ip:port."
+    " By default it will try localhost",
+    type=str,
+)
 
 args = parser.parse_args()
 
@@ -61,7 +76,7 @@ k = 4
 
 # Define the topology class
 class SDNTopo(Topo):
-    "SDN Topology"
+    """SDN Mininet Topology"""
 
     def __init__(self, k=4, **opts):
 
@@ -102,10 +117,10 @@ class SDNTopo(Topo):
         )
 
         # DEBUG: Add one host to each core switch
-        # h3 = self.addHost("h3", ip="10.10.10.110/24")
-        # h4 = self.addHost("h4", ip="10.10.10.120/24")
-        # self.addLink(h3, core_switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
-        # self.addLink(h4, core_switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
+        h3 = self.addHost("h3", ip="10.10.10.110/24")
+        h4 = self.addHost("h4", ip="10.10.10.120/24")
+        self.addLink(h3, core_switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
+        self.addLink(h4, core_switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
 
 
 # Start network functions
@@ -113,14 +128,27 @@ def startNetwork():
     "Creates and starts the network"
 
     global net, k
+
+    cwd = os.getcwd()
+
+    if args.ryu:
+        subprocess.run([f"{cwd}/start_ryu.sh"])
+
     info(" *** Creating Overlay Network Topology ***\n")
     # Create the topology object
     topo = SDNTopo(k)
     # Create and start the network
-    c1 = RemoteController("c1", ip="127.0.0.1")
+    # Create the controller
+    if args.ctl:
+        ctl_ip, ctl_port = args.ctl.split(":")
+        ctl_port = int(ctl_port)
+        info(ctl_ip, ctl_port)
+    else:
+        ctl_ip, ctl_port = "127.0.0.1", None
+    c1 = RemoteController("c1", ip=ctl_ip, port=ctl_port)
     net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
     net.start()
-    info("*** Running CLI ***\n")
+    # info("*** Running CLI ***\n")
     CLI(net)
 
 
@@ -128,10 +156,14 @@ def startNetwork():
 def stopNetwork():
     "Stops the network"
 
+    # if args.ryu:
+    #     subprocess.run(["start_ryu.sh"])
+
     global net
     if net is not None:
         info("*** Tearing down overlay network ***\n")
         net.stop()
+        subprocess.run(["mn", "-c"])
 
 
 # If run as a script
