@@ -65,69 +65,79 @@ parser.add_argument(
     " By default it will try localhost",
     type=str,
 )
+parser.add_argument(
+    "--nodes",
+    "-n",
+    dest="nodes",
+    required=False,
+    default=4,
+    choices=range(3, 20),
+    help="Define the number of intermediate nodes/switches in the system. Default=4",
+    type=int,
+)
+
 
 args = parser.parse_args()
 
-# Define global vars
+# Global vars
 net = None
-core_switch_list = []
-k = 4
 
 
 # Define the topology class
 class SDNTopo(Topo):
     """SDN Mininet Topology"""
 
-    def __init__(self, k=4, **opts):
+    def __init__(self, **opts):
 
         # Initialize object argument
         super(SDNTopo, self).__init__(*opts)
-        self.k = k
+        self.k = args.nodes
+        self.switch_list = []
 
         # Create the k switches of the mesh topology
-        for i in irange(3, k + 2):
-            switch_name = self.addSwitch("s%s" % i)
-            core_switch_list.append(switch_name)
+        for i in irange(3, self.k + 2):
+            new_switch = self.addSwitch(f"s{i}", dpid=f"{i}")
+            self.switch_list.append(new_switch)
 
         # Create the edge switches
-        s1 = self.addSwitch("s1")
-        s2 = self.addSwitch("s2")
+        e1 = self.addSwitch("edge1", dpid="101")
+        e2 = self.addSwitch("edge2", dpid="102")
 
         # Create the bridge switches and Links
-        s10 = self.addSwitch("s10")
-        s20 = self.addSwitch("s20")
-        self.addLink(s1, s10, bw=args.bw, loss=args.loss, delay=args.delay)
-        self.addLink(s2, s20, bw=args.bw, loss=args.loss, delay=args.delay)
+        s1 = self.addSwitch("s1", dpid="1")
+        s2 = self.addSwitch("s2", dpid="2")
+        self.addLink(s1, e1, bw=args.bw, loss=args.loss, delay=args.delay)
+        self.addLink(s2, e2, bw=args.bw, loss=args.loss, delay=args.delay)
 
         # Connect the edge switches with 2 switches
-        self.addLink(s1, core_switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
-        self.addLink(s1, core_switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
-        self.addLink(s2, core_switch_list[-1], bw=args.bw, loss=args.loss, delay=args.delay)
-        self.addLink(s2, core_switch_list[-2], bw=args.bw, loss=args.loss, delay=args.delay)
-
-        # **** Uncomment for WAN mesh topology ****
-        #  Connect the core switches in a mesh topology
-        # for i in irange(0, len(core_switch_list)-2):
-        #     for j in irange(i+1, len(core_switch_list)-1):
-        #         self.addLink(core_switch_list[i], core_switch_list[j])
+        self.addLink(s1, self.switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
+        self.addLink(s2, self.switch_list[-1], bw=args.bw, loss=args.loss, delay=args.delay)
+        if not self.k % 2:
+            self.addLink(s2, self.switch_list[-2], bw=args.bw, loss=args.loss, delay=args.delay)
 
         # Make STP links
-        self.addLink(
-            core_switch_list[1], core_switch_list[3], bw=args.bw, loss=args.loss, delay=args.delay
-        )
+        for i in range(0, len(self.switch_list) - 2, 2):
+            for j in range(1, 3):
+                self.addLink(
+                    self.switch_list[i],
+                    self.switch_list[i + j],
+                    bw=args.bw,
+                    loss=args.loss,
+                    delay=args.delay,
+                )
 
-        # DEBUG: Add one host to each core switch
-        h3 = self.addHost("h3", ip="10.10.10.110/24")
-        h4 = self.addHost("h4", ip="10.10.10.120/24")
-        self.addLink(h3, core_switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
-        self.addLink(h4, core_switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
+        # # DEBUG: Add one host to each core switch
+        # h3 = self.addHost("h3", ip="10.10.10.110/24")
+        # h4 = self.addHost("h4", ip="10.10.10.120/24")
+        # self.addLink(h3, self.switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
+        # self.addLink(h4, self.switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
 
 
 # Start network functions
 def startNetwork():
     "Creates and starts the network"
 
-    global net, k
+    global net
 
     cwd = os.getcwd()
 
@@ -136,7 +146,7 @@ def startNetwork():
 
     info(" *** Creating Overlay Network Topology ***\n")
     # Create the topology object
-    topo = SDNTopo(k)
+    topo = SDNTopo()
     # Create and start the network
     # Create the controller
     if args.ctl:
@@ -156,10 +166,6 @@ def startNetwork():
 def stopNetwork():
     "Stops the network"
 
-    # if args.ryu:
-    #     subprocess.run(["start_ryu.sh"])
-
-    global net
     if net is not None:
         info("*** Tearing down overlay network ***\n")
         net.stop()
