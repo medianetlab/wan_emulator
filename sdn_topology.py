@@ -172,7 +172,9 @@ def startNetwork():
     c1 = RemoteController("c1", ip=ctl_ip, port=ctl_port)
     net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
     net.start()
-    # info("*** Running CLI ***\n")
+    # Bridge the host external interfaces
+    subprocess.run([f"{cwd}/bridge_mn.sh"])
+    info("*** Running CLI ***\n")
     CLI(net)
 
 
