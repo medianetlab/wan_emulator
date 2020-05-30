@@ -5,6 +5,7 @@ import argparse
 import logging
 import subprocess
 import os
+import random
 
 # Import Mininet classes
 from mininet.topo import Topo
@@ -75,7 +76,15 @@ parser.add_argument(
     help="Define the number of intermediate nodes/switches in the system. Default=4",
     type=int,
 )
-
+parser.add_argument(
+    "--hosts",
+    dest="hosts",
+    required=False,
+    default=0,
+    choices=range(1, 10),
+    help="Add hosts to random switches on the topology",
+    type=int,
+)
 
 args = parser.parse_args()
 
@@ -126,11 +135,16 @@ class SDNTopo(Topo):
                     delay=args.delay,
                 )
 
-        # # DEBUG: Add one host to each core switch
-        # h3 = self.addHost("h3", ip="10.10.10.110/24")
-        # h4 = self.addHost("h4", ip="10.10.10.120/24")
-        # self.addLink(h3, self.switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
-        # self.addLink(h4, self.switch_list[1], bw=args.bw, loss=args.loss, delay=args.delay)
+        # Add one host to each core switch
+        for i in range(args.hosts):
+            new_host = self.addHost(f"h{i}", ip=f"10.10.10.{i}/24")
+            self.addLink(
+                new_host,
+                self.switch_list[random.randint(0, len(self.switch_list) - 1)],
+                bw=args.bw,
+                loss=args.loss,
+                delay=args.delay,
+            )
 
 
 # Start network functions
