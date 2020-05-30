@@ -190,12 +190,20 @@ def startNetwork():
     c1 = RemoteController("c1", ip=ctl_ip, port=ctl_port)
     net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
     net.start()
-    # Bridge the host external interfaces
+    # Add the external host ports to the edge bridges
+    bridge_commands = [f"{cwd}/bridge_mn.sh"]
     if args.random:
         stp = args.nodes
     else:
         stp = 0
-    subprocess.run([f"{cwd}/bridge_mn.sh", str(stp)])
+    bridge_commands.append(str(stp))
+    ans = input("Connect external ifaces? (Y/n) > ")
+    port1, port2 = "0", "0"
+    if ans != "n":
+        port1 = input("Interface 1 name: ")
+        port2 = input("Interface 1 name: ")
+        bridge_commands += [port1, port2]
+    subprocess.run(bridge_commands)
     info("*** Running CLI ***\n")
     CLI(net)
 
