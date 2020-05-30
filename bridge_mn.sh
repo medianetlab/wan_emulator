@@ -14,7 +14,6 @@ if [ ! -z "${1+x}" ];
 then
 for i in $(seq "${1}");
 do
-echo "s${i}"
 ovs-vsctl set bridge "s${i}" stp-enable=true;
 done
 fi

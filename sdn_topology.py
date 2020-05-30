@@ -85,6 +85,11 @@ parser.add_argument(
     help="Add hosts to random switches on the topology",
     type=int,
 )
+parser.add_argument(
+    "--random",
+    action="store_true",
+    help="Create a random switch topology and block loops using STP",
+)
 
 args = parser.parse_args()
 
@@ -121,15 +126,28 @@ class SDNTopo(Topo):
         # Connect the edge switches with 2 switches
         self.addLink(s1, self.switch_list[0], bw=args.bw, loss=args.loss, delay=args.delay)
         self.addLink(s2, self.switch_list[-1], bw=args.bw, loss=args.loss, delay=args.delay)
-        if not self.k % 2:
+        if not self.k % 2 and not args.random:
             self.addLink(s2, self.switch_list[-2], bw=args.bw, loss=args.loss, delay=args.delay)
 
         # Make STP links
-        for i in range(0, len(self.switch_list) - 2, 2):
-            for j in range(1, 3):
+        if not args.random:
+            # Connect each switch in a defined topology
+            for i in range(0, len(self.switch_list) - 2, 2):
+                for j in range(1, 3):
+                    self.addLink(
+                        self.switch_list[i],
+                        self.switch_list[i + j],
+                        bw=args.bw,
+                        loss=args.loss,
+                        delay=args.delay,
+                    )
+        else:
+            # Connect each switch with a random previous one
+            for i in range(1, len(self.switch_list)):
+                connect_switch = random.choice(self.switch_list[:i])
                 self.addLink(
                     self.switch_list[i],
-                    self.switch_list[i + j],
+                    connect_switch,
                     bw=args.bw,
                     loss=args.loss,
                     delay=args.delay,
@@ -137,7 +155,7 @@ class SDNTopo(Topo):
 
         # Add one host to each core switch
         for i in range(args.hosts):
-            new_host = self.addHost(f"h{i}", ip=f"10.10.10.{i}/24")
+            new_host = self.addHost(f"h{i}", ip=f"10.10.10.{i+1}/24")
             self.addLink(
                 new_host,
                 self.switch_list[random.randint(0, len(self.switch_list) - 1)],
@@ -173,7 +191,11 @@ def startNetwork():
     net = Mininet(topo=topo, link=TCLink, controller=c1, autoSetMacs=True)
     net.start()
     # Bridge the host external interfaces
-    subprocess.run([f"{cwd}/bridge_mn.sh"])
+    if args.random:
+        stp = args.nodes
+    else:
+        stp = 0
+    subprocess.run([f"{cwd}/bridge_mn.sh", str(stp)])
     info("*** Running CLI ***\n")
     CLI(net)
 
