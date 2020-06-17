@@ -201,7 +201,7 @@ def startNetwork():
     port1, port2 = "0", "0"
     if ans != "n":
         port1 = input("Interface 1 name: ")
-        port2 = input("Interface 1 name: ")
+        port2 = input("Interface 2 name: ")
         bridge_commands += [port1, port2]
     subprocess.run(bridge_commands)
     info("*** Running CLI ***\n")
